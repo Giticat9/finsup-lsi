@@ -1,24 +1,38 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { TransactionContext } from 'src/utils/db/transaction';
-import { WriteLogDTO } from './dto/write-log.dto';
-import { validate } from 'class-validator';
-import { LogEntity, LogExecutorEnum } from './entities/log.entity';
+import {BadRequestException, Injectable} from '@nestjs/common';
+import {TransactionContext} from 'src/utils/db/transaction';
+import {WriteLogDTO} from './dto/write-log.dto';
+import {validate} from 'class-validator';
+import {LogEntity} from './entities/log.entity';
+import {GetLogQueryDTO} from "./dto/get-log-query.dto";
+import {FindOptionsWhere} from "typeorm";
+import {InjectMapper} from "@automapper/nestjs";
+import {Mapper} from "@automapper/core";
+import {GetLogDTO} from "./dto/get-log.dto";
 
 @Injectable()
 export class LogService {
-    async getLogs(txn: TransactionContext) {
-        return await txn.execute(async queryRunner => {
-            return await queryRunner.manager.find(LogEntity);
-        });
+    constructor(@InjectMapper() private readonly mapper: Mapper) {
     }
 
-    async getLogsByExecutor(txn: TransactionContext, executor: LogExecutorEnum) {
+    async getLogs(txn: TransactionContext, query?: GetLogQueryDTO) {
         return await txn.execute(async queryRunner => {
-            return await queryRunner.manager.find(LogEntity, {
-                where: {
-                    executor: executor,
-                },
+            const where: FindOptionsWhere<LogEntity> = {}
+            if (query?.executor) where.executor = query.executor
+            if (query?.type) where.type = query.type
+
+            const logEntries = await queryRunner.manager.find(LogEntity, {
+                select: [
+                    'id',
+                    'executor',
+                    'type',
+                    'message',
+                    'body',
+                    'createdAt'
+                ],
+                where,
             });
+
+            return this.mapper.mapArray(logEntries, LogEntity, GetLogDTO)
         });
     }
 

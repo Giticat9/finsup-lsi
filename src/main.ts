@@ -3,8 +3,8 @@ import { AppModule } from './app.module';
 import { raw } from 'body-parser';
 import { json, urlencoded } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import {configureSwaggerDoc} from "./configurations/swagger";
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -29,17 +29,12 @@ async function bootstrap() {
         }),
     );
 
-    const swaggerConfig = new DocumentBuilder()
-        .setTitle('Finsup LSI Api')
-        .setVersion('1.0.0')
-        .build();
-
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup('api/swagger', app, document);
+    configureSwaggerDoc(app);
 
     const configService: ConfigService = app.get(ConfigService);
     const port = configService.get<number>('SERVER_PORT') ?? 3000;
 
     await app.listen(port);
 }
+
 bootstrap();
